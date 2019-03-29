@@ -1,6 +1,6 @@
 from flask import current_app, url_for, request, redirect
 from flask_restful import Resource
-from app.extensions import oauth, github
+from app.extensions import oauth
 
 
 class OauthSignIn:
@@ -58,7 +58,37 @@ class OauthSignIn:
 class GithubSignIn(OauthSignIn):
     def __init__(self):
         super(GithubSignIn, self).__init__(provider_name='github')
-        self.service = github
+        self.service = oauth.remote_app(
+            name='github',
+            register=False,
+            consumer_key=self.consumer_id,
+            consumer_secret=self.consumer_secret,
+            request_token_params={"scope": "user:email"},
+            base_url="https://api.github.com/",
+            request_token_url=None,
+            access_token_method="POST",
+            access_token_url="https://github.com/login/oauth/access_token",
+            authorize_url="https://github.com/login/oauth/authorize",
+        )
+
+    def authorize(self):
+        return self.service.authorize(url_for('github.authorize', _external=True))
+
+
+class FacebookSignIn(OauthSignIn):
+    def __init__(self):
+        super(FacebookSignIn, self).__init__(provider_name='facebook')
+        self.service = oauth.remote_app(
+            name='facebook',
+            register=False,
+            consumer_key=self.consumer_id,
+            consumer_secret=self.consumer_secret,
+            request_token_params={"scope": "user:email"},
+            base_url='https://graph.facebook.com/',
+            request_token_url=None,
+            access_token_url='/oauth/access_token',
+            authorize_url='https://www.facebook.com/dialog/oauth',
+        )
 
     def authorize(self):
         return self.service.authorize(url_for('github.authorize', _external=True))
@@ -69,4 +99,3 @@ class OauthResource(Resource):
     def get(cls, provider_name):
         oauth = OauthSignIn.get_provider(provider_name)
         return oauth.authorize()
-
